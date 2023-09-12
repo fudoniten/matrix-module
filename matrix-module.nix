@@ -8,7 +8,7 @@ let
 
   hostSecrets = config.fudo.secrets.host-secrets."${hostname}";
 
-  openIdConfig = builtins.toJSON "matrix-openid.yaml" {
+  openIdConfig = pkgs.writeText "matrix-openid.yaml" (builtins.toJSON {
     oidc_providers = [{
       idp_id = cfg.openid.provider;
       idp_name = cfg.openid.provider;
@@ -22,7 +22,7 @@ let
         display_name_template = "{{ user.name | capitalize }}";
       };
     }];
-  };
+  });
 
 in {
   options.fudo.services.matrix = with types; {
