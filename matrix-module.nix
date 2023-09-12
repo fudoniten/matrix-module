@@ -104,7 +104,7 @@ in {
             args.database = "${cfg.state-directory}/database/data.db";
           };
         };
-        extraConfigFile = [ hostSecrets.matrixOpenIdConfig.target-file ];
+        extraConfigFiles = [ hostSecrets.matrixOpenIdConfig.target-file ];
       };
 
       nginx = {
