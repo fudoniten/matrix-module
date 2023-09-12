@@ -52,6 +52,12 @@ in {
       default = toplevel.config.services.matrixContainer.server-name;
     };
 
+    port = mkOption {
+      type = port;
+      description = "Local port to use for Matrix.";
+      default = 7520;
+    };
+
     openid = {
       provider = mkOption {
         type = str;
