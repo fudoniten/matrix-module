@@ -8,7 +8,7 @@ let
 
   hostSecrets = config.fudo.secrets.host-secrets."${hostname}";
 
-  openIdConfig = pkgs.toJSON "matrix-openid.yaml" {
+  openIdConfig = builtins.toJSON "matrix-openid.yaml" {
     oidc_providers = [{
       idp_id = cfg.openid.provider;
       idp_name = cfg.openid.provider;
