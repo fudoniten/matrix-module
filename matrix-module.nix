@@ -6,6 +6,8 @@ let
 
   hostname = config.instance.hostname;
 
+  hostSecrets = config.fudo.secrets.host-secrets."${hostname}";
+
   openIdConfig = pkgs.toJSON "matrix-openid.yaml" {
     oidc_providers = [{
       idp_id = cfg.openid.provider;
@@ -108,21 +110,6 @@ in {
       nginx = {
         enable = true;
         virtualHosts = {
-          "${cfg.server-name}" = let
-            mkWellKnown = data: ''
-              add_header Content-Type application/json;
-              add_header Access-Control-Allow-Origin *;
-              return 200 '${builtins.toJSON data}';
-            '';
-          in {
-            enableACME = true;
-            forceSSL = true;
-            locations."/.well-known/matrix/server".extraConfig =
-              mkWellKnown { "m.server" = "https://${cfg.hostname}:443"; };
-            locations."/.well-known/matrix/client".extraConfig = mkWellKnown {
-              "m.homeserver".base_url = "https://${cfg.hostname}";
-            };
-          };
           "${cfg.hostname}" = {
             enableACME = true;
             forceSSL = true;
