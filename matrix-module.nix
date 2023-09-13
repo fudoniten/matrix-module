@@ -83,9 +83,13 @@ in {
       user = config.systemd.services.matrix-synapse.serviceConfig.User;
     };
 
-    systemd.tmpfiles.rules =
-      let user = config.systemd.services.matrix-synapse.serviceConfig.User;
-      in [ "d ${cfg.state-directory} 0700 ${user} root - -" ];
+    systemd = {
+      tmpfiles.rules =
+        let user = config.systemd.services.matrix-synapse.serviceConfig.User;
+        in [ "d ${cfg.state-directory} 0700 ${user} root - -" ];
+      services.matrix-synapse.serviceConfig.ReadWritePaths =
+        [ cfg.state-directory ];
+    };
 
     services = {
       matrix-synapse = {
