@@ -141,6 +141,28 @@ in {
           "${cfg.hostname}" = {
             enableACME = true;
             forceSSL = true;
+            listen = [
+              {
+                addr = "0.0.0.0";
+                port = 80;
+                ssl = false;
+              }
+              {
+                addr = "0.0.0.0";
+                port = 443;
+                ssl = true;
+              }
+              {
+                addr = "0.0.0.0";
+                port = 8008;
+                ssl = false;
+              }
+              {
+                addr = "0.0.0.0";
+                port = 8448;
+                ssl = true;
+              }
+            ];
             locations."/" = {
               proxyPass = "http://localhost:${toString cfg.port}";
               proxyWebsockets = true;
