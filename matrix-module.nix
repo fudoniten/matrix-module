@@ -86,7 +86,11 @@ in {
     systemd = {
       tmpfiles.rules =
         let user = config.systemd.services.matrix-synapse.serviceConfig.User;
-        in [ "d ${cfg.state-directory} 0700 ${user} root - -" ];
+        in [
+          "d ${cfg.state-directory}/secrets 0700 ${user} root - -"
+          "d ${cfg.state-directory}/database 0700 ${user} root - -"
+          "d ${cfg.state-directory}/media 0700 ${user} root - -"
+        ];
       services.matrix-synapse.serviceConfig.ReadWritePaths =
         [ cfg.state-directory ];
     };
@@ -101,7 +105,7 @@ in {
           dynamic_thumbnails = true;
           max_upload_size = "100M";
           media_store_path = "${cfg.state-directory}/media";
-          signing_key_path = "${cfg.state-directory}/signing.key";
+          signing_key_path = "${cfg.state-directory}/secrets/signing.key";
           listeners = [{
             port = cfg.port;
             bind_addresses = [ "127.0.0.1" "::1" ];
