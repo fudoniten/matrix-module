@@ -105,6 +105,8 @@ in {
         [ cfg.state-directory ];
     };
 
+    networking.firewall.allowedTCPPorts = [ 8008 8448 ];
+
     services = {
       matrix-synapse = {
         enable = true;
