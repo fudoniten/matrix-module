@@ -13,13 +13,13 @@ let
       idp_id = cfg.openid.provider;
       idp_name = cfg.openid.provider;
       discover = true;
-      issuer = "https://authentik.fudo.org/application/o/matrix/";
+      issuer = cfg.openid.issuer;
       client_id = cfg.openid.client-id;
       client_secret = cfg.openid.client-secret;
       scopes = [ "openid" "profile" "email" ];
       user_mapping_provider.config = {
         localpart_template = "{{ user.preferred_username }}";
-        display_name_template = "{{ user.name | capitalize }}";
+        display_name_template = "{{ user.name|capitalize }}";
       };
     }];
   });
@@ -72,6 +72,11 @@ in {
       client-secret = mkOption {
         type = str;
         description = "OpenID Client Secret.";
+      };
+
+      issuer = mkOption {
+        type = str;
+        description = "OpenID issuer URL.";
       };
     };
   };
