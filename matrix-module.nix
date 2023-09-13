@@ -11,7 +11,7 @@ let
   openIdConfig = pkgs.writeText "matrix-openid.yaml" (builtins.toJSON {
     oidc_providers = [{
       idp_id = cfg.openid.provider;
-      idp_name = cfg.openid.provider;
+      idp_name = cfg.openid.provider-name;
       discover = true;
       issuer = cfg.openid.issuer;
       client_id = cfg.openid.client-id;
@@ -60,6 +60,11 @@ in {
 
     openid = {
       provider = mkOption {
+        type = str;
+        description = "Name/ID of the authentication provider.";
+      };
+
+      provider-name = mkOption {
         type = str;
         description = "Name of the authentication provider.";
       };
