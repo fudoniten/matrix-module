@@ -165,10 +165,16 @@ in {
                 ssl = true;
               }
             ];
-            locations."/" = {
+            locations."/".extraConfig = "return 404;";
+            locations."/_matrix" = {
               proxyPass = "http://localhost:${toString cfg.port}";
-              proxyWebsockets = true;
               recommendedProxySettings = true;
+              proxyWebsockets = true;
+            };
+            locations."/_synapse/client" = {
+              proxyPass = "http://localhost:${toString cfg.port}";
+              recommendedProxySettings = true;
+              proxyWebsockets = true;
             };
           };
         };
