@@ -49,7 +49,7 @@ in {
     hostname = mkOption {
       type = str;
       description = "Hostname at which the server can be reached.";
-      default = toplevel.config.services.matrixContainer.server-name;
+      default = toplevel.config.services.matrix.server-name;
     };
 
     port = mkOption {
@@ -167,12 +167,12 @@ in {
             ];
             locations."/".extraConfig = "return 404;";
             locations."/_matrix" = {
-              proxyPass = "http://localhost:${toString cfg.port}";
+              proxyPass = "http://127.0.0.1:${toString cfg.port}";
               recommendedProxySettings = true;
               proxyWebsockets = true;
             };
             locations."/_synapse/client" = {
-              proxyPass = "http://localhost:${toString cfg.port}";
+              proxyPass = "http://127.0.0.1:${toString cfg.port}";
               recommendedProxySettings = true;
               proxyWebsockets = true;
             };
