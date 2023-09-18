@@ -49,7 +49,7 @@ in {
     hostname = mkOption {
       type = str;
       description = "Hostname at which the server can be reached.";
-      default = toplevel.config.fudo.matrix.server-name;
+      default = toplevel.config.fudo.services.matrix.server-name;
     };
 
     port = mkOption {
