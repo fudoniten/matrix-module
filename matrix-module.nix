@@ -86,7 +86,7 @@ in {
     };
   };
 
-  config = {
+  config = mkIf cfg.enable {
     fudo.secrets.host-secrets."${hostname}".matrixOpenIdConfig = {
       source-file = openIdConfig;
       target-file = "/run/matrix/openid.cfg";
