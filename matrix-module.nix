@@ -122,7 +122,7 @@ in {
           oidc_providers = [ ];
           listeners = [{
             port = cfg.port;
-            bind_addresses = [ "127.0.0.1" "::1" ];
+            bind_addresses = [ "127.0.0.1" ];
             type = "http";
             tls = false;
             x_forwarded = true;
