@@ -118,6 +118,8 @@ in {
           max_upload_size = "100M";
           media_store_path = "${cfg.state-directory}/media";
           signing_key_path = "${cfg.state-directory}/secrets/signing.key";
+          # Only to trigger the inclusion of oidc deps, actual config is elsewhere
+          oidc_providers = [ ];
           listeners = [{
             port = cfg.port;
             bind_addresses = [ "127.0.0.1" "::1" ];
