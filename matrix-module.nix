@@ -136,7 +136,9 @@ in {
             args.database = "${cfg.state-directory}/database/data.db";
           };
         };
+        extras = [ "jwt" "url-preview" ];
         extraConfigFiles = [ hostSecrets.matrixOpenIdConfig.target-file ];
+        configureRedisLocally = true;
       };
 
       nginx = {
