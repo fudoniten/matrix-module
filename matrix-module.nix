@@ -128,7 +128,7 @@ in {
           oidc_providers = [ ];
           jwt_config = mkIf (cfg.openid.jwt-secret != null) {
             enabled = true;
-            algorithm = "HS256";
+            algorithm = "RS256";
             secret = cfg.openid.jwt-secret;
           };
           listeners = [{
