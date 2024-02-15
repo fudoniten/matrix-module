@@ -130,6 +130,7 @@ in {
             enabled = true;
             algorithm = "RS256";
             secret = cfg.openid.jwt-secret;
+            audiences = [ cfg.openid.client-id ];
           };
           listeners = [{
             port = cfg.port;
