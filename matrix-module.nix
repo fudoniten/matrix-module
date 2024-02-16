@@ -132,6 +132,10 @@ in {
             secret = cfg.openid.jwt-secret;
             audiences = [ cfg.openid.client-id ];
           };
+          rc_media_create = {
+            per_second = 5;
+            burst_count = 10;
+          };
           listeners = [{
             port = cfg.port;
             bind_addresses = [ "127.0.0.1" ];
