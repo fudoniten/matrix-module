@@ -120,7 +120,7 @@ in {
         settings = {
           server_name = cfg.server-name;
           public_baseurl = "https://${cfg.hostname}";
-          dynamic_thumbnails = true;
+          dynamic_thumbnails = false;
           max_upload_size = "100M";
           media_store_path = "${cfg.state-directory}/media";
           signing_key_path = "${cfg.state-directory}/secrets/signing.key";
