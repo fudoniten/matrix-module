@@ -4,10 +4,15 @@ with lib;
 let
   cfg = config.fudo.services.matrix;
 
-  hostname = config.instance.hostname;
+  jwtEnabled = cfg.openid.jwt-secret-file != null;
 
-  hostSecrets = config.fudo.secrets.host-secrets."${hostname}";
+  # Runtime path at which the JWT config fragment is assembled, below.
+  jwtConfigPath = "/run/matrix/jwt.cfg";
 
+  # No secret in here any more -- `client_secret_path` names a file Synapse
+  # reads for itself at startup -- so this is an ordinary store path handed
+  # straight to `extraConfigFiles`, rather than something that has to be
+  # copied to a runtime location first.
   openIdConfig = pkgs.writeText "matrix-openid.yaml" (builtins.toJSON {
     oidc_providers = [{
       idp_id = cfg.openid.provider;
@@ -15,7 +20,7 @@ let
       discover = true;
       issuer = cfg.openid.issuer;
       client_id = cfg.openid.client-id;
-      client_secret = cfg.openid.client-secret;
+      client_secret_path = cfg.openid.client-secret-file;
       scopes = [ "openid" "profile" "email" ];
       user_mapping_provider.config = {
         localpart_template = "{{ user.preferred_username }}";
@@ -23,6 +28,27 @@ let
       };
     }];
   });
+
+  # Synapse has no `secret_path` for jwt_config the way it does for OIDC
+  # (synapse/config/jwt.py reads jwt_config.secret as a plain string), so the
+  # fragment is assembled at start-up instead. `read_config_files` merges
+  # config files shallowly, "entirely replacing top-level sections", so
+  # supplying the whole `jwt_config` section here overrides anything earlier.
+  #
+  # jq rather than a shell heredoc because the secret is a PEM: emitting it as
+  # JSON (which is valid YAML) gets the escaping right, where hand-indenting a
+  # multi-line block scalar is easy to get subtly wrong. rtrimstr drops the
+  # trailing newline --rawfile would otherwise keep.
+  mkJwtConfig = pkgs.writeShellScript "matrix-jwt-config" ''
+    set -euo pipefail
+    umask 077
+    ${pkgs.jq}/bin/jq -n \
+      --arg aud '${cfg.openid.client-id}' \
+      --rawfile secret '${toString cfg.openid.jwt-secret-file}' \
+      '{jwt_config: {enabled: true, algorithm: "RS256",
+                     audiences: [$aud], secret: ($secret | rtrimstr("\n"))}}' \
+      > '${jwtConfigPath}'
+  '';
 
 in {
   options.fudo.services.matrix = with types; {
@@ -74,9 +100,16 @@ in {
         description = "OpenID Client ID.";
       };
 
-      client-secret = mkOption {
+      client-secret-file = mkOption {
         type = str;
-        description = "OpenID Client Secret.";
+        description = ''
+          Path to a file containing the OpenID client secret.
+
+          Read by Synapse itself at start-up, via `client_secret_path`, so
+          it must be readable by the matrix-synapse user and need not exist
+          at build time -- which is what lets it be a secret delivered at
+          boot rather than a string baked into the configuration.
+        '';
       };
 
       issuer = mkOption {
@@ -84,21 +117,22 @@ in {
         description = "OpenID issuer URL.";
       };
 
-      jwt-secret = mkOption {
+      jwt-secret-file = mkOption {
         type = nullOr str;
-        description = "JWT secret, for decoding requests";
+        description = ''
+          Path to a file containing the JWT secret, for decoding requests.
+          Null disables JWT login entirely.
+
+          Unlike the client secret, Synapse has no path option for this, so
+          the value is read at start-up and written into a config fragment
+          under /run. The file must be readable by the matrix-synapse user.
+        '';
         default = null;
       };
     };
   };
 
   config = mkIf cfg.enable {
-    fudo.secrets.host-secrets."${hostname}".matrixOpenIdConfig = {
-      source-file = openIdConfig;
-      target-file = "/run/matrix/openid.cfg";
-      user = config.systemd.services.matrix-synapse.serviceConfig.User;
-    };
-
     systemd = {
       tmpfiles.rules =
         let user = config.systemd.services.matrix-synapse.serviceConfig.User;
@@ -106,9 +140,33 @@ in {
           "d ${cfg.state-directory}/secrets 0700 ${user} root - -"
           "d ${cfg.state-directory}/database 0700 ${user} root - -"
           "d ${cfg.state-directory}/media 0700 ${user} root - -"
-        ];
+        ] ++ (optional jwtEnabled "d /run/matrix 0700 ${user} root - -");
+
       services.matrix-synapse.serviceConfig.ReadWritePaths =
         [ cfg.state-directory ];
+
+      # A unit of its own rather than an ExecStartPre on matrix-synapse:
+      # upstream declares ExecStartPre entries too, and their relative order
+      # is not something this module should have to rely on. Ordered `before`
+      # synapse, so the fragment is on disk before any config is read.
+      services.matrix-jwt-config = mkIf jwtEnabled {
+        description = "Assemble Synapse's jwt_config from its runtime secret.";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "matrix-synapse.service" ];
+        requiredBy = [ "matrix-synapse.service" ];
+        # Deliberately no ConditionPathExists on the secret: a skipped unit
+        # counts as satisfied, so synapse would start and then die on a
+        # missing extraConfigFile. Failing here says what actually went wrong.
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          # Runs as the synapse user, which must therefore be able to read
+          # the secret; writing as that user avoids a chown, and the 0700
+          # tmpfiles rule above keeps /run/matrix private to it.
+          User = config.systemd.services.matrix-synapse.serviceConfig.User;
+          ExecStart = mkJwtConfig;
+        };
+      };
     };
 
     networking.firewall.allowedTCPPorts = [ 8008 8448 ];
@@ -126,12 +184,8 @@ in {
           signing_key_path = "${cfg.state-directory}/secrets/signing.key";
           # Only to trigger the inclusion of oidc deps, actual config is elsewhere
           oidc_providers = [ ];
-          jwt_config = mkIf (cfg.openid.jwt-secret != null) {
-            enabled = true;
-            algorithm = "RS256";
-            secret = cfg.openid.jwt-secret;
-            audiences = [ cfg.openid.client-id ];
-          };
+          # jwt_config likewise lives in a runtime fragment now -- see
+          # mkJwtConfig above -- so that the secret never enters the store.
           rc_media_create = {
             per_second = 5;
             burst_count = 10;
@@ -152,9 +206,9 @@ in {
             args.database = "${cfg.state-directory}/database/data.db";
           };
         };
-        extras = [ "url-preview" ]
-          ++ (optional (cfg.openid.jwt-secret != null) "jwt");
-        extraConfigFiles = [ hostSecrets.matrixOpenIdConfig.target-file ];
+        extras = [ "url-preview" ] ++ (optional jwtEnabled "jwt");
+        extraConfigFiles = [ openIdConfig ]
+          ++ (optional jwtEnabled jwtConfigPath);
         configureRedisLocally = true;
       };
 
