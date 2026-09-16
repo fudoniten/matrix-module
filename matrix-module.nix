@@ -240,6 +240,39 @@ in {
                 ssl = true;
               }
             ];
+            locations."/.well-known/matrix/server" = {
+              # Federation discovery. Tells other Matrix servers that the
+              # actual server reachable for federation is on this same host
+              # at port 443. The current matrix-module deploys only one
+              # matrix hostname per host, so the answer is `self` + `:443`.
+              #
+              # Without this, `matrix.fudo.im/.well-known/matrix/server`
+              # falls through to the catch-all `return 404;`, federation
+              # servers can't confirm this hostname is a Matrix server,
+              # and federation silently breaks. Matrix clients (incl. mautrix)
+              # that follow `.well-known/matrix/client` redirects from a
+              # parent hostname (e.g. fudo.im → matrix.fudo.im) also use
+              # the server discovery doc to validate the destination.
+              extraConfig = ''
+                default_type application/json;
+                return 200 '{"m.server":"${cfg.hostname}:443"}';
+              '';
+            };
+            locations."/.well-known/matrix/client" = {
+              # Client discovery for clients that connect directly to
+              # ${cfg.hostname}. Per the spec, this returns the same
+              # base_url the client should use for the API. (Same as the
+              # server-name; matrix-module deploys a single hostname.)
+              #
+              # A parent hostname like `fudo.im` may also publish its own
+              # /.well-known/matrix/client pointing here; that's an
+              # independent setup and does NOT need to be served from this
+              # nginx vhost.
+              extraConfig = ''
+                default_type application/json;
+                return 200 '{"m.homeserver":{"base_url":"https://${cfg.hostname}:443"}}';
+              '';
+            };
             locations."/".extraConfig = "return 404;";
             locations."/_matrix" = {
               proxyPass = "http://127.0.0.1:${toString cfg.port}";
