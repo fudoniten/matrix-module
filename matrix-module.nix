@@ -169,7 +169,9 @@ in {
       };
     };
 
-    networking.firewall.allowedTCPPorts = [ 8008 8448 ];
+    # No 8008: Synapse listens on 127.0.0.1 behind nginx, so a public
+    # plain-HTTP listener only served nginx's default page.
+    networking.firewall.allowedTCPPorts = [ 8448 ];
 
     services = {
       matrix-synapse = {
@@ -228,11 +230,6 @@ in {
                 addr = "0.0.0.0";
                 port = 443;
                 ssl = true;
-              }
-              {
-                addr = "0.0.0.0";
-                port = 8008;
-                ssl = false;
               }
               {
                 addr = "0.0.0.0";
